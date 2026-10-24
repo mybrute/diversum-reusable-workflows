@@ -12,6 +12,11 @@ on:
         required: true
         type: string
 
+      image:
+        description: "Imagem Docker do Canary no GHCR"
+        required: true
+        type: string  
+
 permissions:
   contents: read
 
@@ -21,6 +26,10 @@ jobs:
     runs-on: [self-hosted, Linux, X64, diversum-cd]
 
     environment: ${{ inputs.environment }}
+    
+    concurrency:
+      group: diversum-canary-${{ inputs.environment }}
+      cancel-in-progress: false
 
     steps:
       - name: Check Kubernetes context
@@ -30,3 +39,40 @@ jobs:
         env:
           K8S_NAMESPACE: ${{ inputs.namespace }}
         run: kubectl get pods -n "$K8S_NAMESPACE"
+      
+      - name: Validate Canary image
+        shell: bash
+        env:
+          CANARY_IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$CANARY_IMAGE" =~ ^ghcr\.io/mybrute/canary:sha-[0-9a-f]{7,40}$ ]]; then
+            echo "::error::Invalid Canary image: $CANARY_IMAGE"
+            exit 1
+          fi
+
+          echo "Validated Canary image: $CANARY_IMAGE"
+      
+      - name: Deploy Canary
+        shell: bash
+        env:
+          K8S_NAMESPACE: ${{ inputs.namespace }}
+          CANARY_IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$K8S_NAMESPACE" set image \
+            deployment/canary \
+            canary="$CANARY_IMAGE"
+
+      - name: Wait for Canary rollout
+        shell: bash
+        env:
+          K8S_NAMESPACE: ${{ inputs.namespace }}
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$K8S_NAMESPACE" rollout status \
+            deployment/canary \
+            --timeout=180s
