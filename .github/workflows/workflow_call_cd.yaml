@@ -1,0 +1,32 @@
+name: Reusable - Kubernetes CD
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Ambiente de destino"
+        required: true
+        type: string
+      namespace:
+        description: "Namespace Kubernetes"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check-kubernetes:
+    name: Check Kubernetes - ${{ inputs.environment }}
+    runs-on: [self-hosted, Linux, X64, diversum-cd]
+
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Check Kubernetes context
+        run: kubectl config current-context
+
+      - name: Check Kubernetes pods
+        env:
+          K8S_NAMESPACE: ${{ inputs.namespace }}
+        run: kubectl get pods -n "$K8S_NAMESPACE"
