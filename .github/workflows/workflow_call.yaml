@@ -26,6 +26,30 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Download and validate Canary map
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          MAP_DIR="data-otservbr-global/world"
+          MAP_SHA256="cdf78914b51f568c2011f29aa0755be0229fdc97c75ce01822f6b4011608ee30"
+
+          mkdir -p "$MAP_DIR"
+
+          gh release download map-v1 \
+            --repo mybrute/tibia-infrastructure-lab \
+            --pattern "otservbr.otbm.gz" \
+            --dir "$RUNNER_TEMP"
+
+          gzip -dc "$RUNNER_TEMP/otservbr.otbm.gz" \
+            > "$MAP_DIR/otservbr.otbm"
+
+          echo "$MAP_SHA256  $MAP_DIR/otservbr.otbm" | sha256sum -c -
+
+          echo "Canary map downloaded and validated successfully."  
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
