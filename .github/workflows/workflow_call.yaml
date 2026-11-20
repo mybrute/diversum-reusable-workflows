@@ -91,6 +91,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=canary
+          cache-to: type=gha,mode=max,scope=canary
+
 
       - name: Export published image
         id: image-ref
