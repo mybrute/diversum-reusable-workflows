@@ -13,10 +13,19 @@ on:
         required: false
         type: string
         default: "Dockerfile"
+    
+    outputs:
+      image:
+        description: "Imagem publicada no GHCR"
+        value: ${{ jobs.build-and-push.outputs.image }}    
+
 jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+
+    outputs:
+      image: ${{ steps.image-ref.outputs.image }}
 
     permissions:
       contents: read
@@ -81,4 +90,13 @@ jobs:
           file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}      
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Export published image
+        id: image-ref
+        shell: bash
+        env:
+          IMAGE_NAME: ${{ steps.owner.outputs.name }}
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
+        run: |
+          echo "image=ghcr.io/${IMAGE_NAME}/${{ inputs.image_name }}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"          
